@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+import typing
+from commands2 import InstantCommand, Command
+from commands2.button import CommandGenericHID, CommandXboxController
+from wpilib import XboxController, SendableChooser, SmartDashboard
+from wpimath.geometry import Rotation2d, Translation3d
+from pathplannerlib.auto import AutoBuilder
+
+from constants import OIConstants, SwerveConstants, ShooterConstants, AgitatorConstants, IndexerConstants, IntakeConstants
+from subsystems import *
+from commands import HolonomicDrive
+from button_bindings import ButtonBindings
+from superstructure.superstructure import Superstructure
+
+from utils import log, print_banner
+
+class RobotContainer:
+    def __init__(self):
+        print_banner("INITIALIZING ROBOT CONTAINER")
+
+        # Controllers
+        self.driver_controller = CommandXboxController(OIConstants.kDriverControllerPort)
+        self.operator_controller = CommandXboxController(OIConstants.kOperatorControllerPort)
+
+        # Subsystems
+        self.drive_subsystem = DriveSubsystem(lambda: SwerveConstants.kMaxMetersPerSecond)
+
+        self.autonomous_subsystem = AutonomousSubsystem(self.drive_subsystem)
+
+        self.intake_subsystem = IntakeSubsystem(
+            deployMotorCANID=IntakeConstants.kDeployMotorID,
+            deployMotorInverted=IntakeConstants.kDeployMotorInverted,
+            rollerMotorCANID=IntakeConstants.kRollerMotorID,
+            rollerMotorInverted=IntakeConstants.kRollerMotorInverted
+            )
+
+        self.shooter_subsystem = ShooterSubsystem(
+            ShooterConstants.kShooterMotorID,
+            ShooterConstants.kShooterMotorInverted,
+            name="Shooter"
+            )
+
+        self.shooter2_subsystem = ShooterSubsystem(
+            ShooterConstants.kShooterMotor2ID,
+            ShooterConstants.kShooterMotor2Inverted,
+            name="Shooter2"
+            )
+
+        self.agitator_subsystem = AgitatorSubsystem(
+            AgitatorConstants.kAgitatorMotorID,
+            AgitatorConstants.kAgitatorMotorInverted
+            )
+
+        self.indexer_subsystem = IndexerSubsystem(
+            IndexerConstants.kIndexerMotorID,
+            IndexerConstants.kIndexerMotorInverted
+            )
+
+        self.shot_calculator_subsystem = ShotCalculator(self.drive_subsystem)
+        
+        self.front_limelight = LimelightCamera("limelight-front")
+
+        self.back_limelight = LimelightCamera("limelight-back")
+
+        self.localizer = LimelightLocalizer(
+            drivetrain=self.drive_subsystem,
+            flipIfRed=True
+        )
+
+        self.localizer.addCamera(
+            camera=self.front_limelight,
+            cameraPoseOnRobot=Translation3d(-0.051, -0.241, 0.533),
+            cameraHeadingOnRobot=Rotation2d.fromDegrees(180),
+            minPercentFrame=0.07,
+            maxRotationSpeed=720,
+        )
+        self.localizer.addCamera(
+            camera=self.back_limelight,
+            cameraPoseOnRobot=Translation3d(0.305, 0.025, 0.459),
+            cameraHeadingOnRobot=Rotation2d.fromDegrees(0),
+            minPercentFrame=0.07,
+            maxRotationSpeed=720,
+        )
+
+        self.orchestra_subsystem = OrchestraSubsystem(
+            self.drive_subsystem,
+            self.shooter_subsystem,
+            self.intake_subsystem
+        )
+
+        # Superstructure
+        self.superstructure = Superstructure(
+            drivetrain=self.drive_subsystem,
+            intake=self.intake_subsystem,
+            shooter=self.shooter_subsystem,
+            shooter2=self.shooter2_subsystem,
+            indexer=self.indexer_subsystem,
+            agitator=self.agitator_subsystem,
+            shotCalculator=self.shot_calculator_subsystem,
+            vision=self.front_limelight,
+            orchestra=self.orchestra_subsystem,
+            driverController=self.driver_controller,
+            operatorController=self.operator_controller,
+        )
+
+        # Button Bindings
+        self.buttonBindings = ButtonBindings(self)
+        self.buttonBindings.configureButtonBindings()
+
+        # Drive command
+        self.drive_subsystem.setDefaultCommand(
+            HolonomicDrive(
+                drivetrain=self.drive_subsystem,
+                forwardSpeed=lambda: -self.driver_controller.getRawAxis(XboxController.Axis.kLeftY),
+                leftSpeed=lambda: self.driver_controller.getRawAxis(XboxController.Axis.kLeftX),
+                rotationSpeed=lambda: self.driver_controller.getRawAxis(XboxController.Axis.kRightX),
+                fieldRelative=True,
+                rateLimit=True,
+                square=True
+            )
+        )
+
+        # Auto and Test Choosers
+        self.auto_chooser = AutoBuilder.buildAutoChooser()
+        SmartDashboard.putData("Auto Chooser", self.auto_chooser)
+        self._lastPreviewedAuto = None
+        self.test_chooser = SendableChooser()
+
+        print_banner("ROBOT CONTAINER INITIALIZATION COMPLETE")
+
+    def updateAutoPreview(self):
+        selected = self.auto_chooser.getSelected()
+
+        if selected != self._lastPreviewedAuto:
+            self.autonomous_subsystem.drawAuto(selected)
+            self._lastPreviewedAuto = selected
+
+    def getAutonomousCommand(self) -> InstantCommand:
+        command = self.auto_chooser.getSelected()
+        if command is not None:
+            return command
+        else:
+            return InstantCommand()
+
+    def getTestCommand(self) -> InstantCommand:
+        command = self.test_chooser.getSelected()
+        if command is not None:
+            return command
+        else:
+            return InstantCommand()

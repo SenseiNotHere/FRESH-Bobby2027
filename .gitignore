@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+venv/
+.vscode/
+ctre_sim/
+.DS_Store
+simgui.json
+simgui-window.json
+simgui-ds.json
+.claude/
