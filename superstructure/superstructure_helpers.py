@@ -13,7 +13,7 @@ class SuperstructureHelpers:
     #  Intake 
 
     def _stow_intake_pivot(self: "Superstructure"):
-        """Send pivot to stow via position controller. Safe to call every loop — never kills the PID."""
+        """Send pivot to stow via position controller. Safe to call every loop, never kills the PID."""
         if self.hasIntake and self.intake.is_homed():
             self.intake.stow()
 

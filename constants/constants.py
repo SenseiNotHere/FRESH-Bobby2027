@@ -134,6 +134,8 @@ class ModuleConstants:
     kTurningMotorCurrentLimit = 40
     kTurningStatorCurrentLimit = 60
 
+    kMaxSpeedMetersPerSecond = (kMotorFreeSpeedRpm / 60.0 / kDriveGearRatio) * (2 * math.pi * kWheelRadius)
+
 
 class OIConstants:
     kDriverControllerPort = 0
@@ -153,6 +155,10 @@ class AutoConstants:
 
     kPController = 1.0
     kPThetaController = 0.5
+    kDXController = 1.0
+    kDYController = 1.0
+
+    kUseSqrtControl = False
 
     kThetaControllerConstraints = TrapezoidProfileRadians.Constraints(
         kMaxAngularSpeedRadiansPerSecond,

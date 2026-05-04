@@ -166,6 +166,9 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         # Sim stuff
         self.last_speeds = ChassisSpeeds(0, 0, 0)
 
+        # Heading override (for PointTowardsLocation command)
+        self._heading_override_target: Translation2d | None = None
+
     # Periodic
     def periodic(self) -> None:
         if self.alliance is None:
@@ -196,7 +199,7 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
 
     def adjustOdometry(self, shift: Translation2d, rotation: Rotation2d):
         """
-        Nudges the current odometry pose by shift and rotation — used by the localizer
+        Nudges the current odometry pose by shift and rotation, used by the localizer
         to apply a weighted vision correction without a full reset.
         """
         current = self.getPose()
@@ -207,6 +210,27 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         Returns the current yaw rate in degrees per second.
         """
         return math.degrees(self.get_state().speeds.omega)
+
+    def arcadeDrive(self, driveSpeed: float, rotationSpeed: float, assumeManualInput: bool = False):
+        """
+        Arcade drive: forward/backward motion with rotation.
+        Maps to drive(xSpeed=driveSpeed, ySpeed=0, rot=rotationSpeed, fieldRelative=False).
+        """
+        self.drive(driveSpeed, 0, rotationSpeed, fieldRelative=False, rateLimit=False)
+
+    def startOverrideToFaceThisPoint(self, location: Translation2d) -> bool:
+        """
+        Start a heading override that makes the robot point toward the given location.
+        Used by PointTowardsLocation command.
+        """
+        self._heading_override_target = location
+        return True
+
+    def stopOverrideToFaceThisPoint(self, location: Translation2d):
+        """
+        Stop the heading override.
+        """
+        self._heading_override_target = None
 
     def getPose(self) -> Pose2d:
         """
@@ -258,6 +282,21 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
             vx = self.x_limit.calculate(vx)
             vy = self.y_limit.calculate(vy)
             omega = self.rot_limit.calculate(omega)
+
+        # Apply heading override if active
+        if self._heading_override_target is not None:
+            pose = self.getPose()
+            dx = self._heading_override_target.x - pose.x
+            dy = self._heading_override_target.y - pose.y
+            target_angle = math.degrees(math.atan2(dy, dx))
+            current_angle = self.getHeading().degrees()
+            error = target_angle - current_angle
+            while error > 180:
+                error -= 360
+            while error < -180:
+                error += 360
+            # Proportional control: kP = 0.005 (from AimToDirectionConstants)
+            omega = max(-SwerveConstants.kMaxAngularSpeed, min(SwerveConstants.kMaxAngularSpeed, 0.005 * error * SwerveConstants.kMaxAngularSpeed))
 
         speeds = ChassisSpeeds(vx, vy, omega)
         self.last_speeds = speeds

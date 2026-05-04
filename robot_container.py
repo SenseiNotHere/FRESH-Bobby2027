@@ -24,6 +24,7 @@ class RobotContainer:
         self.operator_controller = CommandXboxController(OIConstants.kOperatorControllerPort)
 
         # Subsystems
+        log("RobotContainer", "Initializing subsystems...")
         self.drive_subsystem = DriveSubsystem(lambda: SwerveConstants.kMaxMetersPerSecond)
 
         self.autonomous_subsystem = AutonomousSubsystem(self.drive_subsystem)
@@ -104,6 +105,8 @@ class RobotContainer:
             operatorController=self.operator_controller,
         )
 
+        log("RobotContainer", "Subsystems initialized")
+        log("RobotContainer", "Configuring rest of robot...")
         # Button Bindings
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()
@@ -126,8 +129,9 @@ class RobotContainer:
         SmartDashboard.putData("Auto Chooser", self.auto_chooser)
         self._lastPreviewedAuto = None
         self.test_chooser = SendableChooser()
-
+        log("RobotContainer", "Robot ready for action!")
         print_banner("ROBOT CONTAINER INITIALIZATION COMPLETE")
+        log("RobotContainer", "Have fun, drive safe, and make sure to leave the robot better than you found it!")
 
     def updateAutoPreview(self):
         selected = self.auto_chooser.getSelected()

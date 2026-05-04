@@ -16,7 +16,7 @@ class SuperstructureStates:
         self._stop_orchestra()
         self._stop_intake_rollers()
         # Position mechanism: command to stow (keeps PID running until target is reached,
-        # then holds — never calls stop() which would kill the controller mid-move)
+        # then holds, never calls stop() which would kill the controller mid-move)
         self._stow_intake_pivot()
 
     def _handle_intaking(self: "Superstructure"):

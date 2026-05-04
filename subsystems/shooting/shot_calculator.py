@@ -28,7 +28,10 @@ class ShotCalculator(Subsystem):
     - Effective target pose used for aiming
     - Yaw angle required for the robot to face the target
 
-    Credits to FRC Team 868 - TechHOUNDS for the original shot calculation concepts.
+    Credits to FRC Team 868 - TechHOUNDS for the original shot calculation concepts written in Java.
+
+    This shot calculator is a translation and adaptation of the original Java code into Python.
+    It is not a direct line-by-line translation, but it maintains almost the same functionality and structure.
 
     :param drivetrain: The drivetrain subsystem used to obtain the robot's current pose.
     """

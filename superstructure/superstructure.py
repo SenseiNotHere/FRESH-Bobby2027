@@ -100,7 +100,7 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         self.robot_state = RobotState.IDLE
         self.robot_readiness = RobotReadiness()
 
-        # State handlers — called every loop while in the given state
+        # State handlers, called every loop while in the given state
         self._state_handlers = {
             RobotState.IDLE: self._handle_idle,
 

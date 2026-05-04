@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from commands2 import InstantCommand, RunCommand
-from wpilib import XboxController
+from commands2 import InstantCommand, RunCommand, ParallelCommandGroup
+from wpilib import XboxController, drive
 
 if TYPE_CHECKING:
     from robot_container import RobotContainer
@@ -18,7 +18,9 @@ from commands import (
     PlayChampionshipSong,
     ResetXY,
     ResetSwerveFront,
+    PointTowardsLocation,
 )
+from constants import Hub
 
 
 class ButtonBindings:
@@ -30,48 +32,54 @@ class ButtonBindings:
         self._operatorButtonBindings()
 
     def _driverButtonBindings(self):
-        rc = self.robot_container
-        driver = rc.driver_controller
-        drive = rc.drive_subsystem
-        ss = rc.superstructure
+        robot_container = self.robot_container
+        driver_controller = robot_container.driver_controller
+        drive_subsystem = robot_container.drive_subsystem
+        superstructure = robot_container.superstructure
 
         # Reset odometry to field starting position
-        driver.pov(0).onTrue(ResetXY(0, 0, 0, drive, reason="DriverResetXY"))
+        driver_controller.pov(0).onTrue(ResetXY(0, 0, 0, drive_subsystem, reason="DriverResetXY"))
 
         # Reset swerve heading (keeps position, re-zeros gyro heading)
-        driver.pov(180).onTrue(ResetSwerveFront(drive))
+        driver_controller.pov(180).onTrue(ResetSwerveFront(drive_subsystem))
 
         # X-break (lock wheels)
-        driver.b().whileTrue(RunCommand(lambda: drive.setX(), drive))
+        driver_controller.b().whileTrue(RunCommand(lambda: drive_subsystem.setX(), drive_subsystem))
 
         # Shoot (spin up + auto-feed when ready)
-        driver.rightTrigger(0.5).whileTrue(PrepShot(ss))
+        driver_controller.rightTrigger(0.5).whileTrue(PrepShot(superstructure))
 
-        # Passing shot
-        driver.leftTrigger(0.5).whileTrue(PassingFuel(ss))
+        # Point toward hub (Right Bumper)
+        point_hub = PointTowardsLocation(
+            drivetrain=drive_subsystem,
+            location=Hub.BLUE_HUB,
+            locationIfRed=Hub.RED_HUB
+        )
+        driver_controller.rightBumper().whileTrue(point_hub)
 
         # Agitator reverse (unjam)
-        driver.y().whileTrue(AgitatorReverse(ss))
+        driver_controller.y().whileTrue(AgitatorReverse(superstructure))
 
         # Play song
-        driver.back().whileTrue(PlaySong(ss))
+        driver_controller.back().whileTrue(PlaySong(superstructure))
 
         # Play championship song
-        driver.start().whileTrue(PlayChampionshipSong(ss))
+        driver_controller.start().whileTrue(PlayChampionshipSong(superstructure))
 
     def _operatorButtonBindings(self):
-        rc = self.robot_container
-        operator = rc.operator_controller
-        ss = rc.superstructure
+        robot_container = self.robot_container
+        operator_controller = robot_container.operator_controller
+        superstructure = robot_container.superstructure
+        intake_subsystem = robot_container.intake_subsystem
 
-        # Intake rollers
-        operator.rightTrigger(0.5).whileTrue(DoIntake(ss))
+        # Intake rollers (Right Trigger)
+        operator_controller.rightTrigger(0.5).whileTrue(DoIntake(superstructure))
 
-        # Reverse intake (unjam)
-        operator.leftTrigger(0.5).whileTrue(ReverseIntake(ss))
+        # Reverse intake (Left Trigger)
+        operator_controller.leftTrigger(0.5).whileTrue(ReverseIntake(superstructure))
 
-        # Stow intake
-        operator.leftBumper().onTrue(StowIntake(ss))
+        # Stow intake (Left Bumper)
+        operator_controller.leftBumper().onTrue(StowIntake(superstructure))
 
-        # Deploy intake (hold position without running rollers)
-        operator.rightBumper().whileTrue(DeployIntake(ss))
+        # Deploy intake (Right Bumper)
+        operator_controller.rightBumper().whileTrue(DeployIntake(superstructure))
