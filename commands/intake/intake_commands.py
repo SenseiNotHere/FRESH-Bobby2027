@@ -26,14 +26,12 @@ def ReverseIntake(superstructure: "Superstructure"):
 def DeployIntake(superstructure: "Superstructure"):
     """
     Deploy the pivot without running rollers.
-    Use with whileTrue() to hold deploy; releases to IDLE (stow) when done.
     """
     return superstructure.createStateCommand(RobotState.INTAKE_DEPLOYED)
 
 
 def StowIntake(superstructure: "Superstructure"):
     """
-    Immediately transition to IDLE, which stows the pivot and stops rollers.
-    Use with onTrue().
+    Stows the pivot without running rollers.
     """
-    return superstructure.createStateCommand(RobotState.IDLE, finishImmediately=True)
+    return superstructure.createStateCommand(RobotState.INTAKE_STOWED)

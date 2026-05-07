@@ -25,7 +25,7 @@ class RobotContainer:
 
         # Subsystems
         log("RobotContainer", "Initializing subsystems...")
-        self.drive_subsystem = DriveSubsystem(lambda: SwerveConstants.kMaxMetersPerSecond)
+        self.drive_subsystem = DriveSubsystem(lambda: 1.0)
 
         self.autonomous_subsystem = AutonomousSubsystem(self.drive_subsystem)
 

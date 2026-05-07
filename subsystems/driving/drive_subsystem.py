@@ -6,6 +6,7 @@ from commands2 import Subsystem
 from wpilib import SmartDashboard, Field2d, DriverStation, RobotBase, Timer
 from pykit.logger import Logger
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from ntcore import NetworkTableInstance
 from wpimath.kinematics import ChassisSpeeds
 from wpimath.filter import SlewRateLimiter
 
@@ -157,6 +158,9 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         # Field 2D
         self.field = Field2d()
         SmartDashboard.putData("Field", self.field)
+        self._pose_pub = NetworkTableInstance.getDefault().getStructTopic(
+            "SmartDashboard/RobotPose", Pose2d
+        ).publish()
 
         # Alliance
         self.alliance = None
@@ -176,6 +180,7 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
 
         pose = self.get_state().pose
         self.field.setRobotPose(pose)
+        self._pose_pub.set(pose)
 
         SmartDashboard.putNumber("Drivetrain/X", pose.x)
         SmartDashboard.putNumber("Drivetrain/Y", pose.y)

@@ -44,8 +44,8 @@ class SwerveConstants:
     kMaxAngularSpeed = math.tau
 
     # Slew rate limiting
-    kMagnitudeSlewRate = 9.8
-    kRotationalSlewRate = 12.0
+    kMagnitudeSlewRate = 20.0
+    kRotationalSlewRate = 20.0
 
     # CAN IDs: drive motors
     kFrontLeftDriving = 7
@@ -250,3 +250,7 @@ class IndexerConstants:
 class AgitatorConstants:
     kAgitatorMotorID = 3
     kAgitatorMotorInverted = True
+
+
+class RobotConstants:
+    kPDHCanID = 1

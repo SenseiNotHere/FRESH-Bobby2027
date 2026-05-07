@@ -79,7 +79,7 @@ class ButtonBindings:
         operator_controller.leftTrigger(0.5).whileTrue(ReverseIntake(superstructure))
 
         # Stow intake (Left Bumper)
-        operator_controller.leftBumper().onTrue(StowIntake(superstructure))
+        operator_controller.leftBumper().whileTrue(StowIntake(superstructure))
 
         # Deploy intake (Right Bumper)
         operator_controller.rightBumper().whileTrue(DeployIntake(superstructure))

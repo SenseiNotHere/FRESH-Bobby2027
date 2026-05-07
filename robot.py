@@ -3,8 +3,10 @@ from commands2 import CommandScheduler, Command
 from pykit.loggedrobot import LoggedRobot
 from pykit.logger import Logger
 from pykit.wpilog.wpilogwriter import WPILOGWriter
+from pykit.inputs.loggablepowerdistribution import LoggedPowerDistribution
 
 from robot_container import RobotContainer
+from constants.constants import RobotConstants
 
 class FRCRobot(LoggedRobot):
     autonomousCommand: typing.Optional[Command] = None
@@ -12,6 +14,7 @@ class FRCRobot(LoggedRobot):
 
     # Robot General
     def robotInit(self):
+        LoggedPowerDistribution.instance = LoggedPowerDistribution(moduleId=RobotConstants.kPDHCanID)
         Logger.addDataReciever(WPILOGWriter())
         Logger.start()
         self.robot_container = RobotContainer()

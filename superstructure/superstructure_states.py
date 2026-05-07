@@ -15,9 +15,6 @@ class SuperstructureStates:
         self._stop_agitator()
         self._stop_orchestra()
         self._stop_intake_rollers()
-        # Position mechanism: command to stow (keeps PID running until target is reached,
-        # then holds, never calls stop() which would kill the controller mid-move)
-        self._stow_intake_pivot()
 
     def _handle_intaking(self: "Superstructure"):
         self._deploy_intake_pivot()
@@ -44,10 +41,7 @@ class SuperstructureStates:
     def _handle_shooting(self: "Superstructure"):
         self._spin_up_shooters()
         self._pulse_intake()
-        if self.robot_readiness.canFeed:
-            self._feed_shooters()
-        else:
-            self._stop_feeders()
+        self._feed_shooters()
 
     def _handle_passing_fuel(self: "Superstructure"):
         self._spin_up_shooters_dashboard()

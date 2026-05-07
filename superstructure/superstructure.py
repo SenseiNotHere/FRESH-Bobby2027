@@ -189,9 +189,10 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         state that was changed by another command before this one finished.
         """
         def on_end(interrupted):
-            if self.robot_state == state:
-                self.setState(RobotState.IDLE)
-
+#            if self.robot_state == state:
+#                self.setState(RobotState.IDLE)
+            self.setState(RobotState.IDLE)
+            
         return FunctionalCommand(
             onInit=lambda: self.setState(state),
             onExecute=lambda: None,
@@ -224,6 +225,7 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         oldState = self.robot_state
         self.robot_state = newState
         self._state_start_time = Timer.getFPGATimestamp()
+        self._can_feed_since = None
 
         log("Superstructure", f"{oldState.name} -> {newState.name}")
         SmartDashboard.putString("Superstructure/State", newState.name)
