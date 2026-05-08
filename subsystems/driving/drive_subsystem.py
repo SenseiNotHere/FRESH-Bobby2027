@@ -107,17 +107,12 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         # Drivetrain Builder
         SwerveDrivetrain.__init__(
             self,
-            TalonFX,  # Drive motor type
-            TalonFX,  # Steer motor type
-            CANcoder,  # Encoder type
-            drivetrain_constants,  # Drivetrain constants
-            SwerveConstants.kOdometryUpdateFrequency,  # Odometry update frequency in Hz
-            [
-                front_left,
-                front_right,
-                back_left,
-                back_right
-            ]  # Module constants list
+            TalonFX,
+            TalonFX,
+            CANcoder,
+            drivetrain_constants,
+            SwerveConstants.kOdometryUpdateFrequency,
+            [front_left, front_right, back_left, back_right]
         )
 
         # Configure motor neutral modes
@@ -155,7 +150,7 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         self.y_limit = SlewRateLimiter(SwerveConstants.kMagnitudeSlewRate)
         self.rot_limit = SlewRateLimiter(SwerveConstants.kRotationalSlewRate)
 
-        # Field 2D
+        # Field 2D (kept for Elastic field widget)
         self.field = Field2d()
         SmartDashboard.putData("Field", self.field)
         self._pose_pub = NetworkTableInstance.getDefault().getStructTopic(
@@ -173,26 +168,54 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
         # Heading override (for PointTowardsLocation command)
         self._heading_override_target: Translation2d | None = None
 
+        # Module name labels for logging
+        self._module_names = ["FrontLeft", "FrontRight", "BackLeft", "BackRight"]
+
     # Periodic
     def periodic(self) -> None:
         if self.alliance is None:
             self.getAlliance()
 
         pose = self.get_state().pose
+        speeds = self.get_state().speeds
+
+        # Field widget + NT pose publisher (kept for Elastic)
         self.field.setRobotPose(pose)
         self._pose_pub.set(pose)
 
-        SmartDashboard.putNumber("Drivetrain/X", pose.x)
-        SmartDashboard.putNumber("Drivetrain/Y", pose.y)
-        SmartDashboard.putNumber("Drivetrain/Heading", pose.rotation().degrees())
+        # Pose & heading
         Logger.recordOutput("Drivetrain/Pose", pose)
         Logger.recordOutput("Drivetrain/Heading", pose.rotation().degrees())
 
-        # Drivetrain Calibration
+        # Chassis speeds
+        Logger.recordOutput("Drivetrain/Speeds/VX", speeds.vx)
+        Logger.recordOutput("Drivetrain/Speeds/VY", speeds.vy)
+        Logger.recordOutput("Drivetrain/Speeds/Omega", math.degrees(speeds.omega))
+        Logger.recordOutput("Drivetrain/Speeds/LinearMPS",
+            math.hypot(speeds.vx, speeds.vy))
+
+        # Per-module logging
+        for i, module in enumerate(self.modules):
+            name = self._module_names[i]
+            state = module.get_current_state()
+            target = module.get_target_state()
+            Logger.recordOutput(f"Drivetrain/{name}/DriveVelocityMPS", state.speed)
+            Logger.recordOutput(f"Drivetrain/{name}/SteerAngleDeg", state.angle.degrees())
+            Logger.recordOutput(f"Drivetrain/{name}/TargetDriveVelocityMPS", target.speed)
+            Logger.recordOutput(f"Drivetrain/{name}/TargetSteerAngleDeg", target.angle.degrees())
+            Logger.recordOutput(f"Drivetrain/{name}/DriveCurrentAmps",
+                module.drive_motor.get_torque_current().value)
+            Logger.recordOutput(f"Drivetrain/{name}/SteerCurrentAmps",
+                module.steer_motor.get_torque_current().value)
+
+        # Heading override active flag
+        Logger.recordOutput("Drivetrain/HeadingOverrideActive",
+            self._heading_override_target is not None)
+
+        # Drivetrain calibration mode
         if CALIBRATING_DRIVETRAIN:
-            dist_from_origin = math.hypot(pose.x, pose.y)  # distance from origin
-            SmartDashboard.putNumber("Drivetrain/Calibrating/DistanceFromOrigin", dist_from_origin)
-            # Great used for calibrating the gyro
+            dist_from_origin = math.hypot(pose.x, pose.y)
+            Logger.recordOutput("Drivetrain/Calibrating/DistanceFromOrigin", dist_from_origin)
 
     def resetOdometry(self, pose: Pose2d, reason: str = ""):
         """
@@ -251,7 +274,7 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
 
     def setX(self):
         """
-        Sets the robot into X-Break positon.
+        Sets the robot into X-Break position.
         """
         self.set_control(self.brake_request)
 
@@ -300,8 +323,10 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
                 error -= 360
             while error < -180:
                 error += 360
-            # Proportional control: kP = 0.005 (from AimToDirectionConstants)
-            omega = max(-SwerveConstants.kMaxAngularSpeed, min(SwerveConstants.kMaxAngularSpeed, 0.005 * error * SwerveConstants.kMaxAngularSpeed))
+            omega = max(
+                -SwerveConstants.kMaxAngularSpeed,
+                min(SwerveConstants.kMaxAngularSpeed, 0.005 * error * SwerveConstants.kMaxAngularSpeed)
+            )
 
         speeds = ChassisSpeeds(vx, vy, omega)
         self.last_speeds = speeds
@@ -314,9 +339,7 @@ class DriveSubsystem(Subsystem, SwerveDrivetrain):
     def stop(self):
         self.set_control(self.robot_speeds_request.with_speeds(ChassisSpeeds(0, 0, 0)))
 
-    # Autonomous support
     def driveRobotRelativeChassisSpeeds(self, speeds: ChassisSpeeds, feedforwards):
-
         request = self.robot_speeds_request.with_speeds(speeds)
 
         if feedforwards is not None:

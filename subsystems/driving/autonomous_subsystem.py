@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from commands2 import Subsystem
 from wpilib import DriverStation
+from pykit.logger import Logger
 
 from pathplannerlib.auto import AutoBuilder, PathPlannerAuto, DriveFeedforwards
 from pathplannerlib.controller import PPHolonomicDriveController
@@ -18,11 +19,9 @@ if TYPE_CHECKING:
 
 from utils import log
 
+
 class AutonomousSubsystem(Subsystem):
-    def __init__(
-            self,
-            drivetrain: DriveSubsystem,
-    ):
+    def __init__(self, drivetrain: "DriveSubsystem"):
         """
         Autonomous Subsystem class. Handles all autonomous-related functionality.
         This is a single instance class. Meaning there should only ever be one instance of this class.
@@ -33,7 +32,6 @@ class AutonomousSubsystem(Subsystem):
 
         self.drivetrain = drivetrain
 
-        # Register commands and event triggers
         self.registerNamedCommands()
         self.registerEventTriggers()
 
@@ -81,16 +79,20 @@ class AutonomousSubsystem(Subsystem):
 
         try:
             paths = PathPlannerAuto.getPathGroupFromAutoFile(autoName)
-
             poses = [pose for path in paths for pose in path.getPathPoses()]
 
             if self.shouldFlipPath():
                 poses = [FlippingUtil.flipFieldPose(pose) for pose in poses]
 
             self.drivetrain.field.getObject("Auto Path").setPoses(poses)
+            Logger.recordOutput("Auto/PreviewedAuto", autoName)
+            Logger.recordOutput("Auto/PreviewPoseCount", len(poses))
 
         except Exception as e:
             log("Autonomous", f"Failed to draw auto '{autoName}': {e}")
+            Logger.recordOutput("Auto/PreviewError", str(e))
 
     def clearAutoPreview(self):
         self.drivetrain.field.getObject("Auto Path").setPoses([])
+        Logger.recordOutput("Auto/PreviewedAuto", "")
+        Logger.recordOutput("Auto/PreviewPoseCount", 0)

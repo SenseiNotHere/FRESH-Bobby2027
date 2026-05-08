@@ -1,6 +1,22 @@
-'''
-    This test module imports tests that come with pyfrc, and can be used
-    to test basic functionality of just about any robot.
-'''
+import pytest
+from robot import FRCRobot
 
-from pyfrc.tests import *
+
+@pytest.fixture
+def robot():
+    return FRCRobot()
+
+
+def test_teleop(robot):
+    with robot.teleop():
+        pass
+
+
+def test_autonomous(robot):
+    with robot.autonomous():
+        pass
+
+
+def test_disabled(robot):
+    with robot.disabled():
+        pass

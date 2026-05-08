@@ -3,6 +3,7 @@ from typing import Optional, TYPE_CHECKING
 from commands2 import Subsystem
 from phoenix6.orchestra import Orchestra
 from wpilib import SendableChooser, SmartDashboard
+from pykit.logger import Logger
 
 from utils import log
 
@@ -14,12 +15,12 @@ if TYPE_CHECKING:
 
 class OrchestraSubsystem(Subsystem):
     _instance = None
-    
+
     def __init__(
         self,
-        driveSubsystem: DriveSubsystem,
-        shooterSubsystem: ShooterSubsystem,
-        intakeSubsystem: IntakeSubsystem,
+        driveSubsystem: "DriveSubsystem",
+        shooterSubsystem: "ShooterSubsystem",
+        intakeSubsystem: "IntakeSubsystem",
     ):
         """
         Orchestra Subsystem.
@@ -51,62 +52,52 @@ class OrchestraSubsystem(Subsystem):
         )
 
         # Register motors
-        for subsystem in (
-            driveSubsystem,
-            shooterSubsystem,
-            intakeSubsystem,
-        ):
+        for subsystem in (driveSubsystem, shooterSubsystem, intakeSubsystem):
             if subsystem is None:
                 continue
-
             for motor in subsystem.getMotors():
                 self._orchestra.add_instrument(motor)
 
-        # Song Chooser
-
+        # Song Chooser (kept — Elastic needs this as a NT widget)
         self._song_chooser = SendableChooser()
-
         self._song_chooser.setDefaultOption(
             "Yes And? - Ariana Grande",
             "/home/lvuser/py/deploy/files/Yesand.chrp"
         )
-
         self._song_chooser.addOption(
             "Espresso - Sabrina Carpenter",
             "/home/lvuser/py/deploy/files/Espresso.chrp"
         )
-
         self._song_chooser.addOption(
             "Needy - Ariana Grande",
             "/home/lvuser/py/deploy/files/Needy.chrp"
         )
-
         self._song_chooser.addOption(
             "Dandelion - Ariana Grande",
             "/home/lvuser/py/deploy/files/Dandelion.chrp"
         )
-
         self._song_chooser.addOption(
             "When Did You Get Hot - Sabrina Carpenter",
             "/home/lvuser/py/deploy/files/WhenDidYouGetHot.chrp"
         )
-
         self._song_chooser.addOption(
             "Tití Me Preguntó - Bad Bunny",
             "/home/lvuser/py/deploy/files/TitiMePregunto.chrp"
         )
-
         self._song_chooser.addOption(
             "Stateside - PinkPantheress",
             "/home/lvuser/py/deploy/files/Stateside.chrp"
         )
-
         self._song_chooser.addOption(
             "Despacito - Luis Fonsi",
             "/home/lvuser/py/deploy/files/Despacito.chrp"
         )
-
         SmartDashboard.putData("Song Selection", self._song_chooser)
+
+    def periodic(self):
+        Logger.recordOutput("Orchestra/IsPlaying", self._orchestra.is_playing())
+        Logger.recordOutput("Orchestra/CurrentSong", self._current_song or "")
+        Logger.recordOutput("Orchestra/ChampionshipMode", self._championship_mode)
 
     # Public API
 
@@ -124,7 +115,6 @@ class OrchestraSubsystem(Subsystem):
             self._orchestra.play()
 
     def play_championship_song(self):
-
         if not self._championship_mode:
             log("Orchestra", "Championship mode not enabled.")
             return
@@ -137,7 +127,6 @@ class OrchestraSubsystem(Subsystem):
 
         if not self._orchestra.is_playing():
             self._orchestra.play()
-
 
     def stop(self):
         self._orchestra.stop()

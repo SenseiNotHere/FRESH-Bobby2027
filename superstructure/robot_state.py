@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+import wpilib
+
 
 class RobotState(Enum):
     # General

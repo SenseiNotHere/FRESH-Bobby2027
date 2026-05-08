@@ -43,6 +43,7 @@ class AgitatorSubsystem(Subsystem):
             PersistMode.kPersistParameters
         )
 
+        # Speed Chooser (kept — Elastic needs this as a NT widget)
         self.speedChooser = SendableChooser()
         self.speedChooser.setDefaultOption("25%", 0.25)
         self.speedChooser.addOption("5%", 0.05)
@@ -70,17 +71,13 @@ class AgitatorSubsystem(Subsystem):
             if elapsed >= period:
                 self._lastToggleTime = now
                 self._forward = not self._forward
-                self._applyOscillateOutput()  # only command on direction flip
+                self._applyOscillateOutput()
 
-        speed = self.motor.get()
-        SmartDashboard.putNumber("Agitator/Motor Speed", speed)
-        SmartDashboard.putBoolean("Agitator/Agitator Running", self.isRunning())
-        SmartDashboard.putBoolean("Agitator/Agitator Oscillating", self._oscillateEnabled)
-        SmartDashboard.putBoolean("Agitator/Agitator Forward", self._forward)
-        Logger.recordOutput("Agitator/MotorSpeed", speed)
+        Logger.recordOutput("Agitator/MotorSpeed", self.motor.get())
         Logger.recordOutput("Agitator/Running", self.isRunning())
         Logger.recordOutput("Agitator/Oscillating", self._oscillateEnabled)
         Logger.recordOutput("Agitator/Forward", self._forward)
+        Logger.recordOutput("Agitator/OutputCurrent", self.motor.getOutputCurrent())
 
     def _setSpeed(self, speed: float) -> None:
         """Only sends command to motor if speed has changed."""
@@ -112,7 +109,7 @@ class AgitatorSubsystem(Subsystem):
             self._lastToggleTime = Timer.getFPGATimestamp()
             self._forward = True
         self._oscillateEnabled = True
-        self._applyOscillateOutput()  # command immediately on start
+        self._applyOscillateOutput()
 
     def _applyOscillateOutput(self) -> None:
         speed = self.speedChooser.getSelected()

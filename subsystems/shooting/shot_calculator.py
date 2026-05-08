@@ -2,7 +2,6 @@ import math
 from typing import List
 
 from commands2 import Subsystem
-from wpilib import SmartDashboard
 from pykit.logger import Logger
 from wpimath.geometry import Pose2d, Pose3d, Translation2d, Rotation2d
 
@@ -50,7 +49,6 @@ class ShotCalculator(Subsystem):
     # Periodic
 
     def periodic(self):
-
         drivetrain_pose: Pose2d = self.drivetrain.getPose()
         target_pose = getHubPose()
 
@@ -73,26 +71,28 @@ class ShotCalculator(Subsystem):
             Hub.CENTER.rotation()
         )
 
-        relative_pose = (
-            target_pose
-            .relativeTo(drivetrain_pose)
-        )
-
+        relative_pose = target_pose.relativeTo(drivetrain_pose)
         self._effective_yaw = relative_pose.rotation().radians()
         yaw_deg = 180 * self._effective_yaw / math.pi
-        SmartDashboard.putNumber("ShotCalc/EffectiveYaw", yaw_deg)
-        SmartDashboard.putNumber("ShotCalc/Distance", self._target_distance)
+
         Logger.recordOutput("ShotCalc/Distance", self._target_distance)
         Logger.recordOutput("ShotCalc/TargetSpeedRPS", self._target_speed_rps)
         Logger.recordOutput("ShotCalc/EffectiveYaw", yaw_deg)
+        Logger.recordOutput("ShotCalc/EffectiveYawRad", self._effective_yaw)
 
         if self.drivetrain.field is not None:
             vector_to_goal = target_pose.translation() - drivetrain_pose.translation()
-            self.drivetrain.field.getObject("shot-calc-dir").setPoses(draw_arrow(drivetrain_pose.translation(), vector_to_goal))
+            self.drivetrain.field.getObject("shot-calc-dir").setPoses(
+                draw_arrow(drivetrain_pose.translation(), vector_to_goal)
+            )
 
     # Public API
 
     def getTargetDistance(self) -> float:
+        return self._target_distance
+
+    def getDistance(self) -> float:
+        """Alias for getTargetDistance() for use in Superstructure logging."""
         return self._target_distance
 
     def getTargetSpeedRPS(self) -> float:

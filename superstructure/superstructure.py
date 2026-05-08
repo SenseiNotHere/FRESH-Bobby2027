@@ -1,6 +1,6 @@
 from commands2 import FunctionalCommand
 from commands2.button import CommandGenericHID
-from wpilib import SmartDashboard, Timer, XboxController
+from wpilib import Timer
 from pykit.logger import Logger
 
 from subsystems import (
@@ -138,8 +138,10 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         """
         Superstructure update loop. Call from robotPeriodic().
         """
-        SmartDashboard.putString("Superstructure/State", self.robot_state.name)
         Logger.recordOutput("Superstructure/State", self.robot_state.name)
+        Logger.recordOutput("Superstructure/StateValue", self.robot_state.value)
+        Logger.recordOutput("Superstructure/TimeInState",
+            Timer.getFPGATimestamp() - self._state_start_time)
 
         self._update_readiness()
 
@@ -175,12 +177,20 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
             intake_deployed = self.intake.is_deployed()
         self.robot_readiness.intakeDeployed = intake_deployed
 
-        SmartDashboard.putBoolean("Superstructure/ShooterReady", shooter_ready)
-        SmartDashboard.putBoolean("Superstructure/CanFeed", can_feed)
-        SmartDashboard.putBoolean("Superstructure/IntakeDeployed", intake_deployed)
-        Logger.recordOutput("Superstructure/ShooterReady", shooter_ready)
-        Logger.recordOutput("Superstructure/CanFeed", can_feed)
-        Logger.recordOutput("Superstructure/IntakeDeployed", intake_deployed)
+        # Shooter speeds
+        if self.hasShooter:
+            Logger.recordOutput("Superstructure/Shooter1/CurrentRPS", self.shooter.getCurrentRPS())
+            Logger.recordOutput("Superstructure/Shooter1/TargetRPS", self.shooter.getTargetRPS())
+        if self.hasShooter2:
+            Logger.recordOutput("Superstructure/Shooter2/CurrentRPS", self.shooter2.getCurrentRPS())
+            Logger.recordOutput("Superstructure/Shooter2/TargetRPS", self.shooter2.getTargetRPS())
+        if self.hasShotCalc:
+            Logger.recordOutput("Superstructure/ShotCalc/TargetRPS", self.shotCalculator.getTargetSpeedRPS())
+            Logger.recordOutput("Superstructure/ShotCalc/Distance", self.shotCalculator.getDistance())
+
+        Logger.recordOutput("Superstructure/Readiness/ShooterReady", shooter_ready)
+        Logger.recordOutput("Superstructure/Readiness/CanFeed", can_feed)
+        Logger.recordOutput("Superstructure/Readiness/IntakeDeployed", intake_deployed)
 
     def createStateCommand(self, state: RobotState, finishImmediately: bool = False):
         """
@@ -192,7 +202,7 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
 #            if self.robot_state == state:
 #                self.setState(RobotState.IDLE)
             self.setState(RobotState.IDLE)
-            
+
         return FunctionalCommand(
             onInit=lambda: self.setState(state),
             onExecute=lambda: None,
@@ -228,7 +238,10 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         self._can_feed_since = None
 
         log("Superstructure", f"{oldState.name} -> {newState.name}")
-        SmartDashboard.putString("Superstructure/State", newState.name)
+        Logger.recordOutput("Superstructure/LastTransition",
+            f"{oldState.name} -> {newState.name}")
+        Logger.recordOutput("Superstructure/TransitionTimestamp",
+            Timer.getFPGATimestamp())
 
     def getState(self) -> RobotState:
         return self.robot_state

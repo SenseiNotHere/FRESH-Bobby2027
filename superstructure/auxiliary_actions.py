@@ -1,4 +1,5 @@
-from wpilib import DriverStation, Timer, XboxController, SmartDashboard
+from wpilib import DriverStation, Timer, XboxController
+from pykit.logger import Logger
 from utils import log
 
 
@@ -60,12 +61,16 @@ class ShiftNotifier:
             else "SHIFT 4" if elapsed < 85
             else "ENDGAME"
         )
-        SmartDashboard.putString("Current Shift", currentShift)
+
+        # Single source of truth — Logger publishes to NT4 which Elastic reads
+        Logger.recordOutput("Match/CurrentShift", currentShift)
+        Logger.recordOutput("Match/ElapsedTime", elapsed)
 
         self._handle_rumble_timeout()
 
     def _notify(self, text: str):
         log("Aux", text)
+        Logger.recordOutput("Match/ShiftAlert", text)
         if self.driverController is None:
             return
         try:

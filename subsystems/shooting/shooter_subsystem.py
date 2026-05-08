@@ -1,4 +1,6 @@
 from commands2 import Subsystem
+from wpilib import SmartDashboard
+from pykit.logger import Logger
 
 from phoenix6.hardware import TalonFX
 from phoenix6.controls import VelocityVoltage, NeutralOut
@@ -8,9 +10,6 @@ from phoenix6.configs import (
     CurrentLimitsConfigs,
 )
 from phoenix6.signals import NeutralModeValue, InvertedValue
-
-from wpilib import SmartDashboard, SendableChooser
-from pykit.logger import Logger
 
 from constants import ShooterConstants
 
@@ -31,13 +30,13 @@ class ShooterSubsystem(Subsystem):
 
         :param motorCANID: CAN ID of the TalonFX controlling the shooter motor.
         :param motorInverted: Whether the shooter motor is inverted.
+        :param name: Name used for telemetry keys (default: "Shooter").
         """
         super().__init__()
 
         self._name = name
 
         # Motor setup
-
         self.motor = TalonFX(motorCANID)
 
         motorConfig = TalonFXConfiguration()
@@ -73,17 +72,15 @@ class ShooterSubsystem(Subsystem):
         self.neutralRequest = NeutralOut()
 
         # State
-
         self._targetRPS: float | None = None
 
-        # Dashboard (Manual Testing Only)
+        # Dashboard input for manual testing (kept — read back via getNumber)
         SmartDashboard.putNumber(f"{self._name}/Percent Input", 25)
         self.kMaxRPM = ShooterConstants.kMaxRPM
 
     # Periodic
 
     def periodic(self):
-
         if self._targetRPS is None:
             self.motor.set_control(self.neutralRequest)
         else:
@@ -91,14 +88,15 @@ class ShooterSubsystem(Subsystem):
                 self.velocityRequest.with_velocity(self._targetRPS)
             )
 
-        # Telemetry
         target_rpm = (self._targetRPS or 0.0) * 60.0
         current_rpm = self.motor.get_velocity().value * 60.0
-        SmartDashboard.putNumber(f"{self._name}/Target RPM", target_rpm)
-        SmartDashboard.putNumber(f"{self._name}/Current RPM", current_rpm)
+
         Logger.recordOutput(f"{self._name}/TargetRPM", target_rpm)
         Logger.recordOutput(f"{self._name}/CurrentRPM", current_rpm)
         Logger.recordOutput(f"{self._name}/AtSpeed", self.atSpeed(50))
+        Logger.recordOutput(f"{self._name}/SupplyCurrent", self.motor.get_supply_current().value)
+        Logger.recordOutput(f"{self._name}/StatorCurrent", self.motor.get_stator_current().value)
+        Logger.recordOutput(f"{self._name}/Spinning", self.isSpinning())
 
     # High-Level API
 
@@ -121,15 +119,19 @@ class ShooterSubsystem(Subsystem):
     def atSpeed(self, tolerance_rpm: float) -> bool:
         if self._targetRPS is None:
             return False
-
         target_rpm = self._targetRPS * 60.0
         current_rpm = self.motor.get_velocity().value * 60.0
-
         return abs(current_rpm - target_rpm) <= tolerance_rpm
+
+    def getCurrentRPS(self) -> float:
+        return self.motor.get_velocity().value
+
+    def getTargetRPS(self) -> float:
+        return self._targetRPS or 0.0
 
     def isSpinning(self) -> bool:
         return self._targetRPS is not None
-    
+
     # Motors
     def getMotors(self):
         yield self.motor

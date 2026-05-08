@@ -1,4 +1,7 @@
 from commands2 import Subsystem
+from wpilib import SmartDashboard, SendableChooser
+from pykit.logger import Logger
+
 from rev import (
     SparkMax,
     SparkMaxConfig,
@@ -7,8 +10,6 @@ from rev import (
     ResetMode,
     PersistMode
 )
-from wpilib import SmartDashboard, SendableChooser
-from pykit.logger import Logger
 
 from constants import IndexerConstants
 
@@ -55,7 +56,7 @@ class IndexerSubsystem(Subsystem):
 
         # Internal state
         self._targetRPM: float | None = None
-        self._lastCommandedRPM: float | None = None  # track last sent command
+        self._lastCommandedRPM: float | None = None
 
         # Optional speed chooser (disabled by default)
         speedChooserEnabled = False
@@ -67,7 +68,6 @@ class IndexerSubsystem(Subsystem):
             self.speedChooser.addOption("50%", 0.5)
             self.speedChooser.addOption("25%", 0.25)
             self.speedChooser.addOption("0%", 0.0)
-
             SmartDashboard.putData("Indexer Speed", self.speedChooser)
 
     # Periodic
@@ -83,9 +83,10 @@ class IndexerSubsystem(Subsystem):
         self._lastCommandedRPM = self._targetRPM
 
         target_rpm = self._targetRPM if self._targetRPM else 0.0
-        SmartDashboard.putNumber("Indexer/Target RPM", target_rpm)
         Logger.recordOutput("Indexer/TargetRPM", target_rpm)
+        Logger.recordOutput("Indexer/ActualRPM", self.motor.getEncoder().getVelocity())
         Logger.recordOutput("Indexer/Running", self.isRunning())
+        Logger.recordOutput("Indexer/OutputCurrent", self.motor.getOutputCurrent())
 
     # High-Level API
 

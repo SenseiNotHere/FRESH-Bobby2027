@@ -1,4 +1,3 @@
-
 #
 # Copyright (c) FIRST and other WPILib contributors.
 # Open Source Software; you can modify and/or share it under the terms of
@@ -11,6 +10,7 @@ from commands2 import Subsystem
 from ntcore import NetworkTableInstance, StringPublisher, StringArrayPublisher
 from wpimath.geometry import Rotation2d
 from wpinet import PortForwarder
+from pykit.logger import Logger
 
 from utils import log
 
@@ -58,7 +58,6 @@ class LimelightCamera(Subsystem):
         if isUsb0:
             self.setupCameraAtUsb0(instance)
 
-
     def setupCameraAtUsb0(self, instance: NetworkTableInstance | None):
         for port in [1180, 5800, 5801, 5802, 5803, 5804, 5805, 5806, 5807, 5808, 5809]:
             PortForwarder.getInstance().add(port, "172.29.0.1", port)
@@ -69,7 +68,6 @@ class LimelightCamera(Subsystem):
         self.ntStreamsValue = [f"mjpeg:{feedUrl}"]
         self.ntSource = publishedStreamInfo.getStringTopic("source").publish()
         self.ntSourceValue = f"ip:{feedUrl}"
-
 
     def addLocalizer(self):
         if self.localizerSubscribed:
@@ -86,7 +84,6 @@ class LimelightCamera(Subsystem):
         # and we can then receive the localizer results from the camera back
         self.botPose = self.table.getDoubleArrayTopic("botpose_orb_wpiblue").getEntry([])
         self.botPoseFlipped = self.table.getDoubleArrayTopic("botpose_orb_wpired").getEntry([])
-
 
     def setPipeline(self, index: int):
         self.pipelineIndexRequest.set(float(index))
@@ -132,6 +129,18 @@ class LimelightCamera(Subsystem):
             log("Vision", f"Camera {self.cameraName} is " + ("UPDATING" if heartbeating else "NO LONGER UPDATING"))
         self.heartbeating = heartbeating
 
+        Logger.recordOutput(f"Vision/{self.cameraName}/Heartbeating", self.heartbeating)
+        Logger.recordOutput(f"Vision/{self.cameraName}/HasDetection", bool(self.hasDetection()))
+        Logger.recordOutput(f"Vision/{self.cameraName}/TX", self.getX())
+        Logger.recordOutput(f"Vision/{self.cameraName}/TY", self.getY())
+        Logger.recordOutput(f"Vision/{self.cameraName}/TA", self.getA())
+        Logger.recordOutput(f"Vision/{self.cameraName}/Pipeline", self.getPipeline())
+        Logger.recordOutput(f"Vision/{self.cameraName}/SecondsSinceHeartbeat", self.getSecondsSinceLastHeartbeat())
+
+        if self.localizerSubscribed:
+            tag_id = self.getAprilTagID()
+            Logger.recordOutput(f"Vision/{self.cameraName}/AprilTagID", tag_id if tag_id is not None else -1)
+
         if heartbeating and self.takingSnapshotsWhenNoDetection and not self.hasDetection():
             if now > self.lastSnapshotRequestTime + self.takingSnapshotsWhenNoDetection:
                 self.snapshotRequestValue += 1
@@ -160,6 +169,7 @@ class LimelightCamera(Subsystem):
         rawID = self.table.getString("tid", "")
         tagID = int(rawID) if rawID.isdigit() else None
         return tagID
+
 
 def _fix_name(name: str):
     if not name:

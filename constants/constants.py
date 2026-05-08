@@ -1,5 +1,7 @@
+from enum import Enum
 import math
 
+import wpilib
 from wpimath import units
 from wpimath.geometry import Translation2d
 from wpimath.kinematics import SwerveDrive4Kinematics
@@ -97,10 +99,10 @@ class ModuleConstants:
     kTurningEncoderInverted = False
     kTurningMotorInverted = False
 
-    kFrontLeftDriveMotorInverted = True
-    kFrontRightDriveMotorInverted = False
-    kBackLeftDriveMotorInverted = True
-    kBackRightDriveMotorInverted = False
+    kFrontLeftDriveMotorInverted = False
+    kFrontRightDriveMotorInverted = True
+    kBackLeftDriveMotorInverted = False
+    kBackRightDriveMotorInverted = True
 
     # Absolute encoder offsets
     kFrontLeftTurningEncoderOffset = 0.264892578125
@@ -252,5 +254,15 @@ class AgitatorConstants:
     kAgitatorMotorInverted = True
 
 
+
+class RobotModes(Enum):
+    REAL = "real"
+    SIM = "sim"
+    REPLAY = "replay"
+
 class RobotConstants:
     kPDHCanID = 1
+
+    kRobotMode: RobotModes = (
+    RobotModes.REAL if wpilib.RobotBase.isReal() else RobotModes.SIM
+    )

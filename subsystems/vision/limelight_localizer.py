@@ -5,6 +5,7 @@ from typing import Dict
 from commands2 import Subsystem
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 from wpimath.geometry import Rotation2d, Translation3d, Pose2d, Translation2d
+from pykit.logger import Logger
 
 from .limelight_camera import LimelightCamera
 from utils import log
@@ -14,6 +15,7 @@ U_TURN = Rotation2d.fromDegrees(180)
 LEARNING_RATE = 0.3
 TYPICAL_PERCENT_FRAME = 0.7  # when the tag is ~2m away
 EMPHASIZE_TAGS_NEARBY = True
+
 
 @dataclass
 class CameraState:
@@ -26,8 +28,14 @@ class CameraState:
 
 
 class LimelightLocalizer(Subsystem):
+    _instance = None
+
     def __init__(self, drivetrain, flipIfRed=False):
         super().__init__()
+
+        if LimelightLocalizer._instance is not None:
+            raise RuntimeError("Only one instance of LimelightLocalizer is allowed.")
+        LimelightLocalizer._instance = self
 
         assert hasattr(drivetrain, "getHeading"), "drivetrain must have getHeading() for localizer to work"
         assert hasattr(drivetrain, "adjustOdometry"), "drivetrain must have adjustOdometry() for localizer to work"
@@ -35,10 +43,10 @@ class LimelightLocalizer(Subsystem):
         self.drivetrain = drivetrain
 
         from getpass import getuser
-
         self.username = getuser()
         self.flipIfRed = flipIfRed
 
+        # Learning rate chooser (kept — Elastic needs this as a NT widget)
         self.learningRateMult = SendableChooser()
         self.learningRateMult.addOption("300%", 3.0)
         self.learningRateMult.addOption("100%", 1.0)
@@ -52,7 +60,7 @@ class LimelightLocalizer(Subsystem):
 
         self.enabled = None
         self.allowed = True
-        self.cameras: Dict[str, CameraState] = dict()  # list of Limelight cameras
+        self.cameras: Dict[str, CameraState] = dict()
 
     def addCamera(
         self,
@@ -78,10 +86,8 @@ class LimelightLocalizer(Subsystem):
         )
         camera.addLocalizer()
 
-
     def setAllowed(self, value: bool):
         self.allowed = value
-
 
     def periodic(self) -> None:
         if len(self.cameras) == 0:
@@ -95,19 +101,33 @@ class LimelightLocalizer(Subsystem):
         if not self.allowed:
             enabled = False
 
+        Logger.recordOutput("Localizer/Enabled", bool(enabled))
+        Logger.recordOutput("Localizer/Allowed", self.allowed)
+        Logger.recordOutput("Localizer/Flipped", flipped)
+        Logger.recordOutput("Localizer/CameraCount", len(self.cameras))
+        Logger.recordOutput("Localizer/LearningRate",
+            LEARNING_RATE * self.learningRateMult.getSelected())
+
         if not enabled:
             return
 
         learningRate: float = LEARNING_RATE * self.learningRateMult.getSelected()
         odometryPos: Pose2d = self.drivetrain.getPose()
         heading: Rotation2d = self.drivetrain.getHeading()
-        rotationSpeed: float = self.drivetrain.getTurnRate()  # rotation speed in degrees per second
+        rotationSpeed: float = self.drivetrain.getTurnRate()
         assert heading is not None
+
+        Logger.recordOutput("Localizer/RotationSpeedDegPerSec", rotationSpeed)
 
         for c in self.cameras.values():
             camera = c.camera
+            camKey = f"Localizer/{camera.cameraName}"
+
             if not camera.ticked or abs(rotationSpeed) > c.maxRotationSpeed:
+                Logger.recordOutput(f"{camKey}/Skipped", True)
                 continue
+
+            Logger.recordOutput(f"{camKey}/Skipped", False)
 
             p = c.cameraPoseOnRobot
             camera.cameraPoseSetRequest.set(
@@ -132,16 +152,29 @@ class LimelightLocalizer(Subsystem):
                 botpose = camera.botPose.get()
 
             if len(botpose) >= 11:
-                # Translation (X,Y,Z), Rotation(Roll,Pitch,Yaw) in degrees, total latency (cl+tl), tag count, tag span, average tag distance from camera, average tag area (percentage of image)
+                # Translation (X,Y,Z), Rotation(Roll,Pitch,Yaw) in degrees,
+                # total latency (cl+tl), tag count, tag span, average tag distance from camera,
+                # average tag area (percentage of image)
                 x, y, z, roll, pitch, yaw, latencyMillisec, count, span, distance, percentage = botpose[0:11]
-                # SmartDashboard.putNumber("Localizer/" + c.camera.cameraName, percentage)
+
+                Logger.recordOutput(f"{camKey}/TagCount", count)
+                Logger.recordOutput(f"{camKey}/TagDistance", distance)
+                Logger.recordOutput(f"{camKey}/TagPercentFrame", percentage)
+                Logger.recordOutput(f"{camKey}/LatencyMS", latencyMillisec)
+                Logger.recordOutput(f"{camKey}/PoseUsed", False)
+
                 if count > 0 and percentage > c.minPercentFrame and not (x == 0 and y == 0):
-                    gain = percentage / TYPICAL_PERCENT_FRAME  # tags nearby have more say than tags far away
+                    gain = percentage / TYPICAL_PERCENT_FRAME
                     if not EMPHASIZE_TAGS_NEARBY:
                         gain = math.sqrt(gain)
                     shift = Translation2d(x - odometryPos.x, y - odometryPos.y) * min(learningRate * gain, 0.5)
                     self.drivetrain.adjustOdometry(shift, Rotation2d.fromDegrees(0))
 
+                    Logger.recordOutput(f"{camKey}/PoseUsed", True)
+                    Logger.recordOutput(f"{camKey}/CorrectionX", shift.x)
+                    Logger.recordOutput(f"{camKey}/CorrectionY", shift.y)
+                    Logger.recordOutput(f"{camKey}/EstimatedX", x)
+                    Logger.recordOutput(f"{camKey}/EstimatedY", y)
 
     def initEnabledChooser(self):
         flipped = None
@@ -152,8 +185,10 @@ class LimelightLocalizer(Subsystem):
                 return  # we cannot yet decide on whether the field should be flipped
             flipped = (color == DriverStation.Alliance.kRed) and self.flipIfRed
             log("Localizer", "color={}, flipped={}".format(color, flipped))
-        log("Localizer", "Localizer will assume flipped={} (username={}, flipIfRed={})".format(flipped, self.username, self.flipIfRed))
+        log("Localizer", "Localizer will assume flipped={} (username={}, flipIfRed={})".format(
+            flipped, self.username, self.flipIfRed))
 
+        # Enabled chooser (kept — Elastic needs this as a NT widget)
         self.enabled = SendableChooser()
         self.enabled.addOption("off", (None, False))
         if flipped in (None, False):

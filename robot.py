@@ -3,26 +3,45 @@ from commands2 import CommandScheduler, Command
 from pykit.loggedrobot import LoggedRobot
 from pykit.logger import Logger
 from pykit.wpilog.wpilogwriter import WPILOGWriter
-from pykit.inputs.loggablepowerdistribution import LoggedPowerDistribution
+from pykit.wpilog.wpilogreader import WPILOGReader
+from pykit.networktables.nt4Publisher import NT4Publisher
 
 from robot_container import RobotContainer
-from constants.constants import RobotConstants
+from constants import RobotModes, RobotConstants
 
 class FRCRobot(LoggedRobot):
     autonomousCommand: typing.Optional[Command] = None
     testCommand: typing.Optional[Command] = None
 
+    def __init__(self):
+        super().__init__()
+        Logger.recordMetadata("Robot", "FRCRobot")
+
+        match RobotConstants.kRobotMode:
+            case RobotModes.REAL:
+                Logger.addDataReciever(WPILOGWriter())
+                Logger.addDataReciever(NT4Publisher(True))
+            case RobotModes.SIM:
+                Logger.addDataReciever(NT4Publisher(True))
+            case RobotModes.REPLAY:
+                Logger.setUseTiming(False)
+                # logPath = LogFileUtil.findReplayLog()
+                # Logger.setReplaySource(WPILOGReader(logPath))
+                # Logger.addDataReciever(WPILOGWriter(logPath + "_sim"))
+                pass
+
+        Logger.start()
+
     # Robot General
     def robotInit(self):
-        LoggedPowerDistribution.instance = LoggedPowerDistribution(moduleId=RobotConstants.kPDHCanID)
-        Logger.addDataReciever(WPILOGWriter())
-        Logger.start()
         self.robot_container = RobotContainer()
 
     def robotPeriodic(self):
+        Logger.periodicBeforeUser()
         CommandScheduler.getInstance().run()
+        self.robot_container.update()
         self.robot_container.superstructure.update()
-    
+
     def disabledPeriodic(self):
         self.robot_container.updateAutoPreview()
 
