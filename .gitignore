@@ -10,3 +10,4 @@ simgui-ds.json
 .claude/
 pyLogs/
 .wpilib/
+.pytest_cache/
