@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 from utils import log
 
+_INSTANCE = None
 
 class AutonomousSubsystem(Subsystem):
     def __init__(self, drivetrain: "DriveSubsystem"):
@@ -29,6 +30,10 @@ class AutonomousSubsystem(Subsystem):
         :param drivetrain: The drivetrain subsystem.
         """
         super().__init__()
+
+        if _INSTANCE is not None:
+            raise RuntimeError("This class is a singleton! Use getInstance() to get the instance of this class.")
+        _INSTANCE = self
 
         self.drivetrain = drivetrain
 

@@ -21,9 +21,9 @@ from .superstructure_states import SuperstructureStates
 
 from utils import log
 
+_INSTANCE = None
 
 class Superstructure(SuperstructureStates, SuperstructureHelpers):
-    _instance = None
 
     def __init__(
             self,
@@ -67,9 +67,9 @@ class Superstructure(SuperstructureStates, SuperstructureHelpers):
         :param driverController: Driver controller.
         :param operatorController: Operator controller.
         """
-        if Superstructure._instance is not None:
+        if _INSTANCE is not None:
             raise RuntimeError("Only one instance of Superstructure is allowed.")
-        Superstructure._instance = self
+        _INSTANCE = self
 
         # Subsystems
         self.drivetrain = drivetrain

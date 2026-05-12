@@ -20,7 +20,8 @@ class IndexerSubsystem(Subsystem):
         Indexer Subsystem.
 
         This subsystem controls the robot's indexer mechanism using a single motor.
-        It can be instantiated multiple times if needed.
+        
+        This subsystem can be instantiated multiple times if needed.
 
         Hardware:
         - Spark MAX controlling a brushless motor used to move game pieces through the indexer.

@@ -22,9 +22,22 @@ from commands import (
 )
 from constants import Hub
 
+_INSTANCE = None
 
 class ButtonBindings:
+    """
+    Button bindings for the robot. This class is responsible for defining what commands are run when buttons on the controllers are pressed.
+    This class is separate from RobotContainer to keep the button bindings organized and focused on just the button-to-command mappings. 
+    RobotContainer is responsible for creating subsystems, commands, and controllers, while ButtonBindings is responsible for connecting those controllers to the commands that operate on the subsystems.
+
+    Creating more than one instance of this class will not work correctly, as the button bindings will be duplicated and may interfere with each other. 
+    The RobotContainer should create a single instance of this class and call configureButtonBindings() to set up the button mappings.
+    """
     def __init__(self, robot_container: "RobotContainer"):
+        if _INSTANCE is not None:
+            raise RuntimeError("ButtonBindings is a singleton class and should only be instantiated once.")
+        _INSTANCE = self
+
         self.robot_container = robot_container
 
     def configureButtonBindings(self):

@@ -25,11 +25,21 @@ from phoenix6.swerve.requests import ApplyFieldSpeeds, ApplyRobotSpeeds, SwerveD
 from constants import SwerveConstants, ModuleConstants
 
 CALIBRATING_DRIVETRAIN = False
-
+_INSTANCE = None
 
 class DriveSubsystem(Subsystem, SwerveDrivetrain):
     def __init__(self, maxSpeedScaleFactor):
+        """
+        This is the main drivetrain subsystem for the robot, responsible for controlling the swerve drivetrain.
+
+        It is not suggested to instantiate this class more than once.
+        
+        :param maxSpeedScaleFactor: An optional function that returns a value from 0 to 1 representing the current maximum speed as a fraction of the robot's true max speed. This is used to implement features like a "precision mode" where the driver can temporarily reduce the robot's max speed for finer control.
+        """
         Subsystem.__init__(self)
+        if _INSTANCE is not None:
+            raise RuntimeError("DriveSubsystem is a singleton and has already been instantiated.")
+        _INSTANCE = self
 
         self.maxSpeedScaleFactor = maxSpeedScaleFactor
 

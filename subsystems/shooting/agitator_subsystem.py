@@ -22,6 +22,8 @@ class AgitatorSubsystem(Subsystem):
         This subsystem controls the agitator mechanism using one or two motors.
         Each motor has its own speed chooser on the dashboard.
 
+        This subsystem can be instantialized multiple times if needed.
+
         Hardware:
         - Spark MAX(s) controlling brushless motor(s) used to drive the agitator.
 

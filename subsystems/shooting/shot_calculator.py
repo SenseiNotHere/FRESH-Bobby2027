@@ -8,6 +8,7 @@ from wpimath.geometry import Pose2d, Pose3d, Translation2d, Rotation2d
 from constants import Hub, getHubPose
 from constants import ShooterConstants
 
+_INSTANCE = None
 
 class ShotCalculator(Subsystem):
     """
@@ -20,6 +21,8 @@ class ShotCalculator(Subsystem):
     The subsystem does not directly control any hardware. Instead, it provides
     calculated values that other subsystems (such as the shooter and drivetrain)
     can use for targeting and shooting logic.
+
+    This subsystem should not be instantialized more than once.
 
     Computed values include:
     - Distance from the robot to the target
@@ -37,6 +40,10 @@ class ShotCalculator(Subsystem):
 
     def __init__(self, drivetrain):
         super().__init__()
+
+        if _INSTANCE is not None:
+            raise RuntimeError("ShotCalculator is a singleton and has already been instantiated.")
+        _INSTANCE = self
 
         self.drivetrain = drivetrain
 

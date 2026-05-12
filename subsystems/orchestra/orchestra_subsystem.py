@@ -12,10 +12,9 @@ if TYPE_CHECKING:
     from subsystems.intaking.intake_subsystem import IntakeSubsystem
     from subsystems.shooting.shooter_subsystem import ShooterSubsystem
 
+_INSTANCE = None
 
 class OrchestraSubsystem(Subsystem):
-    _instance = None
-
     def __init__(
         self,
         driveSubsystem: "DriveSubsystem",
@@ -40,9 +39,9 @@ class OrchestraSubsystem(Subsystem):
         """
         super().__init__()
 
-        if OrchestraSubsystem._instance is not None:
+        if _INSTANCE is not None:
             raise RuntimeError("Only one instance of OrchestraSubsystem is allowed.")
-        OrchestraSubsystem._instance = self
+        _INSTANCE = self
 
         self._orchestra = Orchestra()
         self._current_song: Optional[str] = None
